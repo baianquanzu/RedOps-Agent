@@ -1,6 +1,6 @@
 """
 RedOps - Web后端主程序
-渗透测试Agent Web界面后端
+渗透测试Agent Web界面后端 V2.0
 """
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -14,12 +14,27 @@ import asyncio
 import json
 import uuid
 import os
+import sys
 
-from app.api import chat, targets, scan, config, skills
-from app.core.manager import ScanManager
+# 添加项目根目录到路径
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from web.app.api import chat, targets, scan, config as api_config, skills, system, connectors
+from web.app.core.manager import ScanManager
+from web.app.core.config_manager import get_config_manager, init_config_manager
+from web.app.core.executor import init_executor, get_executor
+from web.app.core.auto_install import get_auto_installer
+
+# 初始化配置管理器
+config_manager = init_config_manager()
+
+# 初始化执行器
+root_mode = config_manager.get("system.root_mode", True)
+allowed_paths = config_manager.get("system.allowed_paths", [])
+init_executor(root_mode=root_mode, allowed_paths=allowed_paths)
 
 # 创建应用
-app = FastAPI(title="RedOps Agent", version="2.0.0")
+app = FastAPI(title="RedOps Agent", version="2.0.0", description="智能渗透测试Agent框架")
 
 # CORS配置
 app.add_middleware(
@@ -86,8 +101,10 @@ async def read_root():
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(targets.router, prefix="/api/targets", tags=["Targets"])
 app.include_router(scan.router, prefix="/api/scan", tags=["Scan"])
-app.include_router(config.router, prefix="/api/config", tags=["Config"])
+app.include_router(api_config.router, prefix="/api/config", tags=["Config"])
 app.include_router(skills.router, prefix="/api/skills", tags=["Skills"])
+app.include_router(system.router, prefix="/api/system", tags=["System"])
+app.include_router(connectors.router, prefix="/api/connectors", tags=["Connectors"])
 
 
 # WebSocket连接管理器
@@ -140,6 +157,16 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "type": "scan_complete",
                     "data": message.get("data")
                 }))
+            elif message.get("type") == "execute_command":
+                # 执行命令
+                from web.app.core.executor import get_executor
+                executor = get_executor()
+                cmd = message.get("command")
+                result = executor.execute(cmd, timeout=30)
+                await websocket.send_text(json.dumps({
+                    "type": "command_result",
+                    "result": result
+                }))
                 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
@@ -148,16 +175,20 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
 @app.get("/api/status")
 async def get_status():
     """获取系统状态"""
+    executor = get_executor()
+    sys_info = executor.get_system_info()
+    
     return {
         "status": "online",
         "version": "2.0.0",
         "active_scans": scan_manager.get_active_count(),
-        "targets_count": len(scan_manager.targets)
+        "targets_count": len(scan_manager.targets),
+        "system_info": sys_info
     }
 
 
 # FOFA API
-from app.integrations.fofa import FOFAClient, FOFA_QUERIES, build_query
+from web.app.integrations.fofa import FOFAClient, FOFA_QUERIES, build_query
 
 fofa_client = FOFAClient()
 
@@ -193,6 +224,34 @@ async def fofa_quick_search(query_type: str, limit: int = 100):
     return result
 
 
+@app.on_event("startup")
+async def startup_event():
+    """启动时初始化"""
+    print("=" * 50)
+    print("RedOps Agent V2.0 启动中...")
+    print("=" * 50)
+    
+    # 初始化配置
+    config = get_config_manager()
+    print(f"配置文件: {config.config_path}")
+    
+    # 初始化执行器
+    executor = get_executor()
+    print(f"Root模式: {executor.permission_guard.root_mode}")
+    print(f"允许路径: {executor.permission_guard.allowed_paths}")
+    
+    # 检查自动安装
+    installer = get_auto_installer()
+    print(f"自动安装: 已就绪")
+    
+    print("=" * 50)
+    print("启动完成！访问 http://localhost:8000")
+    print("=" * 50)
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # 从配置读取 host 和 port
+    host = config_manager.get("web.host", "0.0.0.0")
+    port = config_manager.get("web.port", 8000)
+    uvicorn.run(app, host=host, port=port)
