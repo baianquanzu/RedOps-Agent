@@ -36,7 +36,7 @@ echo -e "${YELLOW}[*] 检查虚拟环境...${NC}"
 VENV_DIR="$SCRIPT_DIR/venv"
 
 if [ ! -d "$VENV_DIR" ]; then
-    echo -e "${YELLOW[*] 创建虚拟环境...${NC}"
+    echo -e "${YELLOW}[*] 创建虚拟环境...${NC}"
     python3 -m venv "$VENV_DIR"
 fi
 
