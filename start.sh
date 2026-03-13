@@ -56,11 +56,11 @@ fi
 pip install --upgrade pip -q
 
 # 检查并安装Web服务依赖
-echo -e "${YELLOW[*] 安装Web服务依赖...${NC}"
+echo -e "${YELLOW}[*] 安装Web服务依赖...${NC}"
 pip install fastapi uvicorn pydantic requests pyyaml -q 2>/dev/null
 
 # 检查并安装桌宠依赖
-echo -e "${YELLOW[*] 安装桌宠依赖...${NC}"
+echo -e "${YELLOW}[*] 安装桌宠依赖...${NC}"
 pip install Pillow tk -q 2>/dev/null
 
 # 检查Nuclei（可选）
