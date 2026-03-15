@@ -4,11 +4,12 @@ RedOps - Telegram机器人模块
 """
 
 import os
-import asyncio
 import json
+import threading
+import time
 from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
-import threading
+import requests
 
 
 class TelegramBot:
@@ -21,7 +22,7 @@ class TelegramBot:
         self.running = False
         self.offset = 0
         self.message_callback: Optional[Callable] = None
-        self._poll_task = None
+        self._poll_thread = None
     
     def is_allowed(self, chat_id: int) -> bool:
         """检查是否允许该聊天"""
@@ -29,7 +30,7 @@ class TelegramBot:
             return True  # 如果没有白名单，允许所有
         return chat_id in self.allowed_chats
     
-    async def send_message(self, chat_id: int, text: str, parse_mode: str = None) -> Dict[str, Any]:
+    def send_message(self, chat_id: int, text: str, parse_mode: str = None) -> Dict[str, Any]:
         """发送消息"""
         url = f"{self.api_base}/sendMessage"
         data = {
@@ -40,14 +41,12 @@ class TelegramBot:
             data["parse_mode"] = parse_mode
         
         try:
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=data) as resp:
-                    return await resp.json()
+            resp = requests.post(url, json=data, timeout=10)
+            return resp.json()
         except Exception as e:
             return {"ok": False, "error": str(e)}
     
-    async def send_document(self, chat_id: int, document: str, caption: str = None) -> Dict[str, Any]:
+    def send_document(self, chat_id: int, document: str, caption: str = None) -> Dict[str, Any]:
         """发送文档"""
         url = f"{self.api_base}/sendDocument"
         data = {
@@ -58,14 +57,12 @@ class TelegramBot:
             data["caption"] = caption
         
         try:
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=data) as resp:
-                    return await resp.json()
+            resp = requests.post(url, json=data, timeout=10)
+            return resp.json()
         except Exception as e:
             return {"ok": False, "error": str(e)}
     
-    async def get_updates(self, timeout: int = 60) -> List[Dict]:
+    def get_updates(self, timeout: int = 60) -> List[Dict]:
         """获取更新"""
         url = f"{self.api_base}/getUpdates"
         params = {
@@ -74,26 +71,24 @@ class TelegramBot:
         }
         
         try:
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params) as resp:
-                    data = await resp.json()
-                    if data.get("ok"):
-                        return data.get("result", [])
-                    return []
+            resp = requests.get(url, params=params, timeout=timeout + 5)
+            data = resp.json()
+            if data.get("ok"):
+                return data.get("result", [])
+            return []
         except Exception as e:
             print(f"获取更新失败: {e}")
             return []
     
-    async def process_updates(self):
+    def process_updates(self):
         """处理更新"""
         while self.running:
             try:
-                updates = await self.get_updates(timeout=30)
+                updates = self.get_updates(timeout=30)
                 
                 for update in updates:
                     # 更新offset
-                    self.offset = max(self.offset, update["update_id"] + 1)
+                    self.offset = max(self.offset, update.get("update_id", 0) + 1)
                     
                     if "message" not in update:
                         continue
@@ -104,57 +99,44 @@ class TelegramBot:
                     
                     # 检查权限
                     if not self.is_allowed(chat_id):
-                        await self.send_message(chat_id, "❌ 您没有权限使用此机器人")
+                        self.send_message(chat_id, "❌ 您没有权限使用此机器人")
                         continue
                     
                     # 调用回调
                     if self.message_callback:
-                        # 异步调用回调
-                        loop = asyncio.get_event_loop()
-                        await loop.run_in_executor(None, self.message_callback, chat_id, text)
+                        try:
+                            self.message_callback(chat_id, text)
+                        except Exception as e:
+                            print(f"处理消息出错: {e}")
                 
-                await asyncio.sleep(1)
+                time.sleep(1)
                 
             except Exception as e:
                 print(f"处理更新出错: {e}")
-                await asyncio.sleep(5)
-    
-    async def start_polling(self):
-        """开始轮询"""
-        self.running = True
-        await self.process_updates()
+                time.sleep(5)
     
     def start(self, message_callback: Callable[[int, str], None] = None):
-        """启动机器人（同步包装）"""
+        """启动机器人"""
         if message_callback:
             self.message_callback = message_callback
         
         self.running = True
         
-        # 在新线程中运行asyncio事件循环
-        def run_loop():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(self.process_updates())
-            except Exception as e:
-                print(f"Telegram机器人错误: {e}")
-            finally:
-                loop.close()
-        
-        thread = threading.Thread(target=run_loop, daemon=True)
-        thread.start()
-        return thread
+        # 在新线程中运行轮询
+        self._poll_thread = threading.Thread(target=self.process_updates, daemon=True)
+        self._poll_thread.start()
+        return self._poll_thread
     
     def stop(self):
         """停止机器人"""
         self.running = False
+        if self._poll_thread:
+            self._poll_thread.join(timeout=2)
     
     def get_me(self) -> Dict[str, Any]:
         """获取机器人信息"""
-        import requests
         try:
-            resp = requests.get(f"{self.api_base}/getMe")
+            resp = requests.get(f"{self.api_base}/getMe", timeout=10)
             return resp.json()
         except Exception as e:
             return {"ok": False, "error": str(e)}

@@ -13,10 +13,3 @@ Pillow>=10.0.0
 
 # 核心依赖
 pyyaml>=6.0
-
-# 机器人集成
-websockets>=12.0
-aiohttp>=3.9.0
-
-# 配置管理
-pyyaml>=6.0

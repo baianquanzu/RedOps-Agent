@@ -6,10 +6,16 @@ RedOps - QQ机器人模块
 import os
 import json
 import asyncio
-import websockets
 import threading
 from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
+
+# 可选导入websockets
+try:
+    import websockets
+    WEBSOCKETS_AVAILABLE = True
+except ImportError:
+    WEBSOCKETS_AVAILABLE = False
 
 
 class QQBot:
@@ -73,6 +79,11 @@ class QQBot:
     
     async def connect(self):
         """连接到WebSocket服务器"""
+        if not WEBSOCKETS_AVAILABLE:
+            print("[QQBot] 错误: websockets库未安装，请运行: pip install websockets")
+            self.running = False
+            return
+            
         headers = {}
         if self.access_token:
             headers["Authorization"] = f"Bearer {self.access_token}"
