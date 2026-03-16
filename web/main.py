@@ -229,6 +229,7 @@ async def startup_event():
     """启动时初始化"""
     print("=" * 50)
     print("RedOps Agent V2.0 启动中...")
+    print("像OpenClaw一样直接执行命令！")
     print("=" * 50)
     
     # 初始化配置
@@ -239,6 +240,25 @@ async def startup_event():
     executor = get_executor()
     print(f"Root模式: {executor.permission_guard.root_mode}")
     print(f"允许路径: {executor.permission_guard.allowed_paths}")
+    
+    # 初始化LLM Agent（如果配置了API Key）
+    llm_config = config.get("llm", {})
+    api_key = llm_config.get("api_key", "")
+    if api_key:
+        from web.app.core.llm_agent import init_llm_agent
+        model = llm_config.get("model", "deepseek-chat")
+        base_url = llm_config.get("base_url", "https://api.deepseek.com/v1")
+        
+        # 初始化LLM并传入executor
+        init_llm_agent(
+            api_key=api_key,
+            model=model,
+            base_url=base_url,
+            executor=executor
+        )
+        print(f"LLM: {model} 已就绪")
+    else:
+        print("LLM: 未配置API Key，将使用本地执行模式")
     
     # 检查自动安装
     installer = get_auto_installer()
