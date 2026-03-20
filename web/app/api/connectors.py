@@ -18,7 +18,7 @@ from web.app.integrations.qq_bot import (
     get_qq_bot, init_qq_bot, start_qq_bot, stop_qq_bot
 )
 
-router = APIRouter(prefix="/api/connectors", tags=["连接器"])
+router = APIRouter(tags=["连接器"])
 
 
 # ==================== Telegram API ====================

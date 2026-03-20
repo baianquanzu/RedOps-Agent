@@ -22,14 +22,66 @@ if errorlevel 1 (
 for /f "delims=" %%i in ('python --version 2^>^&1') do set PYTHON_VER=%%i
 echo [+] Python版本: !PYTHON_VER!
 
-REM 检查并安装依赖
+REM 定义检查函数（通过pip show）
 echo.
 echo [*] 检查依赖...
+
+REM 检查并安装FastAPI
 pip show fastapi >nul 2>&1
 if errorlevel 1 (
-    echo [*] 安装核心依赖...
-    pip install fastapi uvicorn pydantic requests pyyaml Pillow
+    echo [*] 安装 FastAPI...
+    pip install fastapi -q
+) else (
+    echo [+] FastAPI 已安装
 )
+
+REM 检查并安装Uvicorn
+pip show uvicorn >nul 2>&1
+if errorlevel 1 (
+    echo [*] 安装 Uvicorn...
+    pip install uvicorn -q
+) else (
+    echo [+] Uvicorn 已安装
+)
+
+REM 检查并安装Pydantic
+pip show pydantic >nul 2>&1
+if errorlevel 1 (
+    echo [*] 安装 Pydantic...
+    pip install pydantic -q
+) else (
+    echo [+] Pydantic 已安装
+)
+
+REM 检查并安装Requests
+pip show requests >nul 2>&1
+if errorlevel 1 (
+    echo [*] 安装 Requests...
+    pip install requests -q
+) else (
+    echo [+] Requests 已安装
+)
+
+REM 检查并安装PyYAML
+pip show pyyaml >nul 2>&1
+if errorlevel 1 (
+    echo [*] 安装 PyYAML...
+    pip install pyyaml -q
+) else (
+    echo [+] PyYAML 已安装
+)
+
+REM 检查并安装Pillow
+pip show Pillow >nul 2>&1
+if errorlevel 1 (
+    echo [*] 安装 Pillow...
+    pip install Pillow -q
+) else (
+    echo [+] Pillow 已安装
+)
+
+echo.
+echo [+] 环境准备完成！
 
 REM 选择启动模式
 echo.
@@ -68,7 +120,7 @@ exit /b 0
 
 :both
 echo.
-echo [*] 启动Web界面 ^(^后台^)...
+echo [*] 启动Web界面 ^(后台^)...
 start "RedOps Web" cmd /c "cd /d "%~dp0web" && python -m uvicorn main:app --host 0.0.0.0 --port 8000"
 timeout /t 2 /nobreak >nul
 echo [*] 启动桌宠...

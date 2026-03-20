@@ -281,10 +281,38 @@ Type 'help' for commands
             
             <!-- Files Page -->
             <div class="page" id="page-files">
-                <div class="file-manager">
-                    <div class="file-tree" id="file-tree"></div>
-                    <div class="file-content">
-                        <textarea class="file-editor" id="file-editor" placeholder="选择文件查看内容..."></textarea>
+                <div class="file-manager" style="display: flex; flex: 1; overflow: hidden; padding: 16px; gap: 16px;">
+                    <!-- 左侧：路径导航和文件列表 -->
+                    <div style="flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden;">
+                        <div style="padding: 12px; border-bottom: 1px solid var(--border); display: flex; gap: 8px;">
+                            <input type="text" class="form-input" id="file-path-input" value="/" placeholder="当前路径" style="flex: 1;">
+                            <button class="btn" onclick="navigateToPath()">跳转</button>
+                            <button class="btn" onclick="goUpDir()">上级</button>
+                            <button class="btn" onclick="refreshFiles()">刷新</button>
+                        </div>
+                        <div id="file-list" style="flex: 1; overflow-y: auto; padding: 8px;">
+                            <div style="color: var(--text-muted);">加载中...</div>
+                        </div>
+                        <div style="padding: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px;">
+                            <button class="btn" onclick="showNewFolderDialog()">新建文件夹</button>
+                            <button class="btn" onclick="showUploadDialog()">上传文件</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 右侧：文件预览/编辑 -->
+                    <div style="flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden;">
+                        <div style="padding: 12px; border-bottom: 1px solid var(--border);">
+                            <span id="current-file-name" style="color: white; font-weight: 600;">未选择文件</span>
+                            <span id="current-file-info" style="color: var(--text-muted); font-size: 12px; margin-left: 12px;"></span>
+                        </div>
+                        <div id="file-preview" style="flex: 1; overflow: hidden; position: relative;">
+                            <textarea id="file-editor" style="width: 100%; height: 100%; background: #0a0e14; color: #a9d7e6; border: none; padding: 12px; font-family: 'Consolas', monospace; font-size: 13px; resize: none;" placeholder="选择文件查看内容..." readonly></textarea>
+                        </div>
+                        <div style="padding: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px;">
+                            <button class="btn" id="btn-download" onclick="downloadFile()" disabled>下载</button>
+                            <button class="btn" id="btn-save" onclick="saveFile()" disabled style="display: none;">保存</button>
+                            <button class="btn btn-danger" id="btn-delete" onclick="deleteFile()" disabled>删除</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -496,6 +524,221 @@ Type 'help' for commands
             document.getElementById('page-title').textContent = titles[view] || view;
             
             currentView = view;
+            
+            // 切换到文件管理时加载
+            if (view === 'files') {
+                loadCurrentDirectory();
+            }
+        }
+        
+        // ===== 文件管理 =====
+        let currentFilePath = null;
+        
+        function loadCurrentDirectory() {
+            const path = document.getElementById('file-path-input').value || '/';
+            fetch('/api/files/list', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path: path})
+            })
+            .then(r => r.json())
+            .then(data => {
+                renderFileList(data, path);
+            })
+            .catch(err => {
+                document.getElementById('file-list').innerHTML = '<div style="color: var(--danger);">加载失败: ' + err.message + '</div>';
+            });
+        }
+        
+        function renderFileList(data, currentPath) {
+            const container = document.getElementById('file-list');
+            
+            if (!data.success) {
+                container.innerHTML = '<div style="color: var(--danger);">访问失败: ' + data.error + '</div>';
+                return;
+            }
+            
+            const items = data.files || [];
+            
+            if (items.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted);">空目录</div>';
+                return;
+            }
+            
+            container.innerHTML = items.map(item => {
+                const isDir = item.is_directory || item.is_dir;
+                const icon = isDir ? '📁' : '📄';
+                const size = isDir ? '' : formatSize(item.size);
+                return `
+                    <div class="file-item" onclick="selectItem('${item.path.replace(/\\/g, '\\\\')}', ${item.is_directory})" 
+                         ondblclick="openItem('${item.path.replace(/\\/g, '\\\\')}', ${item.is_directory})"
+                         style="padding: 8px 12px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 10px;"
+                         onmouseover="this.style.background='var(--bg-input)'"
+                         onmouseout="this.style.background='transparent'">
+                        <span style="font-size: 18px;">${icon}</span>
+                        <span style="flex: 1; color: var(--text);">${item.name}</span>
+                        <span style="color: var(--text-muted); font-size: 12px;">${size}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+            return (bytes / 1024 / 1024 / 1024).toFixed(1) + ' GB';
+        }
+        
+        function navigateToPath() {
+            const path = document.getElementById('file-path-input').value;
+            loadDirectory(path);
+        }
+        
+        function loadDirectory(path) {
+            document.getElementById('file-path-input').value = path;
+            loadCurrentDirectory();
+        }
+        
+        function goUpDir() {
+            const path = document.getElementById('file-path-input').value;
+            const parent = path.split(/[\\/]/).slice(0, -1).join('/') || '/';
+            loadDirectory(parent === '' ? '/' : parent);
+        }
+        
+        function refreshFiles() {
+            loadCurrentDirectory();
+        }
+        
+        function selectItem(path, isDir) {
+            currentFilePath = path;
+            document.getElementById('current-file-name').textContent = path.split('/').pop() || path;
+            document.getElementById('btn-download').disabled = false;
+            document.getElementById('btn-delete').disabled = false;
+            
+            if (isDir) {
+                document.getElementById('file-editor').value = '[ 目录 ]';
+                document.getElementById('file-editor').readOnly = true;
+                document.getElementById('btn-save').style.display = 'none';
+                document.getElementById('current-file-info').textContent = '目录';
+            } else {
+                fetch('/api/files/read', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: path})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('file-editor').value = data.content || '';
+                    document.getElementById('file-editor').readOnly = false;
+                    document.getElementById('btn-save').style.display = 'inline-block';
+                    document.getElementById('current-file-info').textContent = formatSize(data.size || 0);
+                });
+            }
+        }
+        
+        function openItem(path, isDir) {
+            if (isDir) {
+                loadDirectory(path);
+            } else {
+                selectItem(path, false);
+            }
+        }
+        
+        function saveFile() {
+            if (!currentFilePath) return;
+            const content = document.getElementById('file-editor').value;
+            
+            fetch('/api/files/write', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path: currentFilePath, content: content})
+            })
+            .then(r => r.json())
+            .then(data => {
+                alert(data.success ? '保存成功' : '保存失败: ' + data.error);
+            });
+        }
+        
+        function downloadFile() {
+            if (!currentFilePath) return;
+            const filename = currentFilePath.split('/').pop();
+            
+            fetch('/api/files/download?path=' + encodeURIComponent(currentFilePath))
+            .then(r => r.json())
+            .then(data => {
+                const link = document.createElement('a');
+                link.href = 'data:application/octet-stream;base64,' + data.content;
+                link.download = filename;
+                link.click();
+            });
+        }
+        
+        function deleteFile() {
+            if (!currentFilePath) return;
+            if (!confirm('确定要删除 ' + currentFilePath + ' 吗？')) return;
+            
+            fetch('/api/files/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path: currentFilePath, recursive: true})
+            })
+            .then(r => r.json())
+            .then(data => {
+                alert(data.success ? '删除成功' : '删除失败: ' + data.error);
+                refreshFiles();
+                currentFilePath = null;
+                document.getElementById('file-editor').value = '';
+                document.getElementById('btn-download').disabled = true;
+                document.getElementById('btn-delete').disabled = true;
+            });
+        }
+        
+        function showNewFolderDialog() {
+            const name = prompt('请输入文件夹名称:');
+            if (!name) return;
+            const path = document.getElementById('file-path-input').value;
+            const newPath = path.endsWith('/') ? path + name : path + '/' + name;
+            
+            fetch('/api/files/mkdir', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path: newPath})
+            })
+            .then(r => r.json())
+            .then(data => {
+                alert(data.success ? '创建成功' : '创建失败: ' + data.error);
+                refreshFiles();
+            });
+        }
+        
+        function showUploadDialog() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.onchange = function() {
+                const file = this.files[0];
+                if (!file) return;
+                uploadFile(file);
+            };
+            input.click();
+        }
+        
+        function uploadFile(file) {
+            const path = document.getElementById('file-path-input').value;
+            const targetPath = path.endsWith('/') ? path + file.name : path + '/' + file.name;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/api/files/upload?path=' + encodeURIComponent(targetPath), {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                alert(data.success ? '上传成功' : '上传失败: ' + data.error);
+                refreshFiles();
+            });
         }
         
         // WebSocket

@@ -5,11 +5,14 @@ RedOps Web - 配置API
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
-from app.core import init_llm_agent, is_llm_ready, get_memory_system
+from web.app.core import init_llm_agent, is_llm_ready, get_llm_agent
+from app.core.config_manager import get_config_manager
 
 router = APIRouter()
 
-current_config = {}
+# 从配置管理器加载当前配置
+config_manager = get_config_manager()
+current_config = config_manager._config.copy()
 
 
 class LLMConfig(BaseModel):
@@ -31,6 +34,9 @@ async def get_config():
 async def update_llm_config(config: LLMConfig):
     global current_config
     current_config["llm"] = config.dict()
+    # 同时保存到配置管理器
+    config_manager.set("llm", config.dict())
+    config_manager.save()
     if config.api_key:
         init_llm_agent(api_key=config.api_key, model=config.model)
     return {"status": "updated", "llm_ready": is_llm_ready()}

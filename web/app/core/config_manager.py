@@ -4,10 +4,16 @@ RedOps - 配置管理模块
 """
 
 import os
-import yaml
 import json
 from typing import Dict, Any, Optional
 from pathlib import Path
+
+# 尝试导入yaml，失败则使用json
+try:
+    import yaml
+    HAS_YAML = True
+except ImportError:
+    HAS_YAML = False
 
 
 class ConfigManager:
@@ -38,13 +44,16 @@ class ConfigManager:
         if os.path.exists(self.config_path):
             try:
                 with open(self.config_path, 'r', encoding='utf-8') as f:
-                    if self.config_path.endswith('.yaml') or self.config_path.endswith('.yml'):
-                        self._config = yaml.safe_load(f) or {}
-                    elif self.config_path.endswith('.json'):
+                    if self.config_path.endswith('.json'):
                         self._config = json.load(f)
-                    else:
-                        # 默认尝试YAML
+                    elif (self.config_path.endswith('.yaml') or self.config_path.endswith('.yml')) and HAS_YAML:
                         self._config = yaml.safe_load(f) or {}
+                    else:
+                        # 默认或无yaml时尝试JSON
+                        try:
+                            self._config = json.load(f)
+                        except:
+                            self._config = {}
             except Exception as e:
                 print(f"加载配置失败: {e}")
                 self._config = {}
@@ -56,11 +65,10 @@ class ConfigManager:
     def save(self):
         """保存配置文件"""
         try:
-            with open(self.config_path, 'w', encoding='utf-8') as f:
-                if self.config_path.endswith('.json'):
-                    json.dump(self._config, f, indent=2, ensure_ascii=False)
-                else:
-                    yaml.dump(self._config, f, allow_unicode=True, default_flow_style=False)
+            # 强制使用JSON格式（兼容性好）
+            json_path = self.config_path.replace('.yaml', '.json').replace('.yml', '.json')
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(self._config, f, indent=2, ensure_ascii=False)
             return True
         except Exception as e:
             print(f"保存配置失败: {e}")

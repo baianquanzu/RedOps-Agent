@@ -132,10 +132,26 @@ class LLMAgent:
                     "detail": response.text
                 }
                 
-        except Exception as e:
+        except requests.exceptions.Timeout:
             return {
                 "success": False,
-                "error": str(e)
+                "error": "LLM请求超时，请检查网络连接"
+            }
+        except requests.exceptions.ConnectionError as e:
+            return {
+                "success": False,
+                "error": "LLM连接失败，请检查API配置和网络状态"
+            }
+        except Exception as e:
+            err_msg = str(e)
+            if "ConnectionResetError" in err_msg or "104" in err_msg:
+                return {
+                    "success": False,
+                    "error": "网络连接被重置，可能是目标服务器拒绝了请求"
+                }
+            return {
+                "success": False,
+                "error": f"LLM处理异常: {err_msg[:100]}"
             }
     
     def execute_command(self, command: str, cwd: str = None) -> Dict[str, Any]:
@@ -380,6 +396,82 @@ class LLMAgent:
             commands.append(f"traceroute {target}")
         
         return len(commands) > 0, commands
+    
+    def smart_chat(self, session_id: str, message: str) -> Dict[str, Any]:
+        """
+        智能聊天 - 核心方法
+        任何输入都直接发送给LLM处理
+        """
+        if session_id not in self.conversations:
+            self.create_session(session_id)
+        
+        # 直接将用户消息发送给LLM，让LLM决定如何处理
+        try:
+            response = requests.post(
+                f"{self.base_url}/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": self.model,
+                    "messages": self.conversations[session_id] + [
+                        {"role": "user", "content": message}
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 4096
+                },
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                assistant_message = result["choices"][0]["message"]["content"]
+                
+                # 添加到对话历史
+                self.conversations[session_id].append({
+                    "role": "user", 
+                    "content": message
+                })
+                self.conversations[session_id].append({
+                    "role": "assistant", 
+                    "content": assistant_message
+                })
+                
+                return {
+                    "success": True,
+                    "message": assistant_message,
+                    "executed": False,
+                    "commands": []
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"API错误: {response.status_code}",
+                    "detail": response.text[:200]
+                }
+                
+        except requests.exceptions.Timeout:
+            return {
+                "success": False,
+                "error": "LLM请求超时，请检查网络后重试"
+            }
+        except requests.exceptions.ConnectionError as e:
+            return {
+                "success": False,
+                "error": "LLM连接失败，请检查API配置和网络"
+            }
+        except Exception as e:
+            err_msg = str(e)
+            if "ConnectionResetError" in err_msg or "104" in err_msg:
+                return {
+                    "success": False,
+                    "error": "网络连接被重置，可能是网络不稳定或目标服务器拒绝连接"
+                }
+            return {
+                "success": False,
+                "error": f"LLM处理异常: {err_msg[:150]}"
+            }
     
     def _extract_target(self, message: str) -> str:
         """从消息中提取目标"""

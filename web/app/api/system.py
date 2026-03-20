@@ -16,7 +16,7 @@ from web.app.core.executor import get_executor, init_executor
 from web.app.core.auto_install import get_auto_installer
 from web.app.core.config_manager import get_config_manager
 
-router = APIRouter(prefix="/api/system", tags=["系统控制"])
+router = APIRouter(tags=["系统控制"])
 
 
 # ==================== 请求模型 ====================

@@ -19,11 +19,14 @@ import sys
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from web.app.api import chat, targets, scan, config as api_config, skills, system, connectors
+from web.app.api import chat, targets, scan, config as api_config, skills, system, connectors, terminal, file_manager
 from web.app.core.manager import ScanManager
 from web.app.core.config_manager import get_config_manager, init_config_manager
 from web.app.core.executor import init_executor, get_executor
 from web.app.core.auto_install import get_auto_installer
+
+# 导入LLM模块用于初始化
+from web.app.core import llm_agent
 
 # 初始化配置管理器
 config_manager = init_config_manager()
@@ -105,6 +108,8 @@ app.include_router(api_config.router, prefix="/api/config", tags=["Config"])
 app.include_router(skills.router, prefix="/api/skills", tags=["Skills"])
 app.include_router(system.router, prefix="/api/system", tags=["System"])
 app.include_router(connectors.router, prefix="/api/connectors", tags=["Connectors"])
+app.include_router(terminal.router, prefix="/api/terminal", tags=["Terminal"])
+app.include_router(file_manager.router, prefix="/api/files", tags=["Files"])
 
 
 # WebSocket连接管理器
@@ -168,6 +173,31 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "result": result
                 }))
                 
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+
+# 固定路径的WebSocket（前端连接用）
+@app.websocket("/ws/client")
+async def websocket_client(websocket: WebSocket):
+    """前端WebSocket连接"""
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            try:
+                message = json.loads(data)
+                if message.get("type") == "execute_command":
+                    from web.app.core.executor import get_executor
+                    executor = get_executor()
+                    cmd = message.get("command")
+                    result = executor.execute(cmd, timeout=30)
+                    await websocket.send_text(json.dumps({
+                        "type": "command_result",
+                        "result": result
+                    }))
+            except:
+                pass
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
@@ -243,14 +273,12 @@ async def startup_event():
     
     # 初始化LLM Agent（如果配置了API Key）
     llm_config = config.get("llm", {})
-    api_key = llm_config.get("api_key", "")
-    if api_key:
-        from web.app.core.llm_agent import init_llm_agent
+    api_key = llm_config.get("api_key", "") or config_manager.get("llm.api_key", "")
+    if api_key and api_key != "***":
         model = llm_config.get("model", "deepseek-chat")
         base_url = llm_config.get("base_url", "https://api.deepseek.com/v1")
         
-        # 初始化LLM并传入executor
-        init_llm_agent(
+        llm_agent.init_llm_agent(
             api_key=api_key,
             model=model,
             base_url=base_url,

@@ -30,7 +30,7 @@ def validate_target(url: str) -> bool:
     return bool(re.match(url_pattern, url) or re.match(domain_pattern, url) or re.match(ip_pattern, url))
 
 
-@router.post("/targets")
+@router.post("/")
 async def create_target(target: Target):
     if not validate_target(target.url):
         raise HTTPException(status_code=400, detail="Invalid target format")
@@ -40,19 +40,19 @@ async def create_target(target: Target):
     return target
 
 
-@router.get("/targets")
+@router.get("/")
 async def list_targets():
     return list(targets_db.values())
 
 
-@router.get("/targets/{target_id}")
+@router.get("/{target_id}")
 async def get_target(target_id: str):
     if target_id not in targets_db:
         raise HTTPException(status_code=404, detail="Target not found")
     return targets_db[target_id]
 
 
-@router.delete("/targets/{target_id}")
+@router.delete("/{target_id}")
 async def delete_target(target_id: str):
     if target_id not in targets_db:
         raise HTTPException(status_code=404, detail="Target not found")
@@ -60,7 +60,7 @@ async def delete_target(target_id: str):
     return {"status": "deleted"}
 
 
-@router.post("/targets/batch")
+@router.post("/batch")
 async def create_targets_batch(targets: List[Target]):
     created = []
     errors = []
@@ -75,7 +75,7 @@ async def create_targets_batch(targets: List[Target]):
     return {"created": len(created), "errors": errors}
 
 
-@router.post("/targets/import")
+@router.post("/import")
 async def import_targets(content: str, tags: List[str] = []):
     lines = content.replace(',', '\n').replace(' ', '\n').split('\n')
     lines = [line.strip() for line in lines if line.strip()]

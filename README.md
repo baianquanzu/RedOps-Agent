@@ -1,359 +1,145 @@
-# RedOps - 智能渗透测试Agent框架
+# RedOps Agent
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge&logo=python" alt="Version">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-orange?style=for-the-badge" alt="Platform">
-</p>
+> 智能渗透测试Agent - 像人类一样思考和行动的自动化测试助手
 
-<p align="center">
-  <strong>RedOps</strong> - 基于LLM的智能渗透测试Agent框架
-</p>
+[![Python Version](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/Platform-Kali%20Linux%20|%20Windows%20|%20macOS-green.svg)](https://www.kali.org/)
 
----
+## 特性
 
-## 项目简介
+- **智能对话** - 大模型驱动，自然语言交互
+- **终端控制** - Web界面直接操作root shell
+- **文件管理** - Root权限文件浏览、上传、下载
+- **漏洞扫描** - 集成Nuclei、Nmap等扫描工具
+- **跨平台** - 支持Kali Linux、Windows、macOS
 
-RedOps 是一款专为渗透测试行业设计的智能Agent框架，基于大语言模型（LLM）驱动，能够自主完成信息收集、漏洞扫描、渗透测试等工作。框架采用模块化设计，支持多种LLM接入，并提供Web界面和桌面宠物两种交互方式。
-
-本框架适用于安全研究人员、渗透测试工程师、红队队员等安全从业者，可显著提升渗透测试效率。
-
----
-
-## 功能特点
-
-### 🤖 智能Agent核心
-
-- **LLM驱动**: 支持DeepSeek、OpenAI、Anthropic Claude、阿里云Qwen等多种大语言模型
-- **自主决策**: 基于自然语言理解，自动规划渗透测试路径
-- **上下文记忆**: 持久化会话上下文，支持多轮对话和任务连续性
-- **技能注册**: 动态加载技能模块，可扩展渗透测试能力
-
-### 🛠️ 渗透测试工具集成
-
-- **Nuclei集成**: 调用Nuclei进行漏洞扫描，支持自定义POC
-- **FOFA资产搜索**: 集成FOFA接口，快速发现目标资产
-- **系统命令执行**: 集成Kali Linux工具链，执行各类渗透测试命令
-- **JS逆向分析**: 自动分析页面JavaScript代码，提取敏感信息
-
-### 📊 Web管理界面
-
-- **对话界面**: 通过自然语言与Agent交互，下达渗透测试任务
-- **目标管理**: 管理渗透测试目标，支持多目标批量测试
-- **技能市场**: 浏览和管理可用的渗透测试技能
-- **实时状态**: 监控扫描进度和任务状态
-- **报告生成**: 自动生成HTML格式的渗透测试报告
-
-### 🖥️ 桌面宠物
-
-- **黑客少女形象**: 仿天选姬风格的黑客少女桌宠
-- **状态反馈**: 实时显示渗透测试进度和结果
-- **交互功能**: 支持拖拽、点击等交互操作
-
----
-
-## 环境要求
-
-### Python环境
-
-- Python 3.10 或更高版本
-- 推荐使用虚拟环境（venv）隔离依赖
-
-### 操作系统
-
-- **Kali Linux**: 最佳运行平台，预装大部分渗透测试工具
-- **Windows**: 支持，需手动安装相关工具
-- **其他Linux发行版**: 部分支持
-
-### 必需工具（Kali Linux）
-
-```bash
-# 建议安装的工具
-sudo apt update
-sudo apt install -y python3-pip python3-venv git curl wget
-# Nuclei (漏洞扫描)
-sudo apt install nuclei -y
-# 其他常用工具
-sudo apt install -y nmap sqlmap dirb gobuster
-```
-
-### 网络要求
-
-- 能够访问OpenAI API / DeepSeek API / 其他LLM服务
-- 能够访问FOFA等资产搜索平台（可选）
-
----
-
-## 安装配置
+## 快速开始
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/baianquanzu/RedOps-Agent.git
-cd RedOps-Agent
+git clone https://github.com/yourusername/RedOps.git
+cd RedOps
 ```
 
-### 2. 创建虚拟环境（推荐）
+### 2. 安装依赖
 
+**Kali Linux 2024.4+:**
 ```bash
-# Linux/macOS
-python3 -m venv venv
-source venv/bin/activate
+bash setup_env.sh
+```
 
-# Windows
+**Windows/macOS:**
+```bash
+# 创建虚拟环境
 python -m venv venv
-venv\Scripts\activate
-```
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-### 3. 安装依赖
-
-```bash
+# 安装依赖
 pip install -r requirements.txt
 ```
 
-### 4. 配置LLM API
+### 3. 配置LLM
 
-编辑 `web/app/core/config.yaml` 或通过Web界面配置：
+启动后访问 http://localhost:8000 ，进入「系统设置」配置：
 
-```yaml
-llm:
-  provider: "deepseek"  # 可选: deepseek, openai, anthropic, qwen
-  api_key: "your-api-key-here"
-  base_url: "https://api.deepseek.com/v1"  # 根据提供商调整
-  model: "deepseek-chat"
-```
+| 配置项 | 说明 |
+|--------|------|
+| API Provider | 选择服务商 (DeepSeek/OpenAI/Anthropic等) |
+| API Key | 你的API密钥 |
+| API地址 | API端点URL |
+| 模型 | 使用的模型名称 |
 
-### 5. 配置FOFA（可选）
-
-```yaml
-fofa:
-  email: "your-email@example.com"
-  key: "your-fofa-api-key"
-```
-
----
-
-## 快速开始
-
-### 方式一：Windows一键启动
-
-双击运行 `start.bat`，选择启动选项：
-
-```
-========================================
-       RedOps 渗透测试Agent框架
-========================================
-请选择启动模式：
-1. 启动Web界面 (推荐)
-2. 启动桌面宠物
-3. 同时启动Web和桌宠
-4. 仅安装依赖
-5. 退出
-```
-
-### 方式二：Kali Linux一键启动
+### 4. 启动服务
 
 ```bash
-# 添加执行权限
-chmod +x start.sh
+# 方式1：一键启动
+bash start.sh
 
-# 运行启动脚本
-./start.sh
+# 方式2：手动启动
+source venv/bin/activate
+python start_server.py
 ```
 
-### 方式三：手动启动
+服务启动后访问 **http://localhost:8000**
 
-#### 启动Web服务
+## 功能模块
 
-```bash
-# 进入项目目录
-cd RedOps-Agent
+### 对话助手
+- 自然语言与Agent交互
+- 自动分析和执行命令
+- 智能结果分析
 
-# 启动Web服务
-cd web
-python main.py
-```
+### 终端
+- WebShell操作界面
+- Root权限命令执行
+- 实时命令输出
 
-服务启动后，浏览器访问 http://localhost:8000
+### 文件管理
+- 完整文件系统浏览
+- 文件上传/下载
+- 文本编辑器
 
-#### 启动桌面宠物
-
-```bash
-python desktop_pet.py
-```
-
----
-
-## 使用指南
-
-### Web界面使用
-
-1. **访问界面**: 打开浏览器访问 http://localhost:8000
-2. **配置API**: 在设置页面配置LLM API密钥
-3. **添加目标**: 在目标管理页面添加渗透测试目标
-4. **开始测试**: 通过对话界面下达测试任务
-
-### 示例命令
-
-```
-"请对 192.168.1.1 进行端口扫描"
-"使用Nuclei扫描 example.com 的漏洞"
-"查找 example.com 的子域名"
-"对目标进行SQL注入测试"
-```
-
-### 桌面宠物交互
-
-- **拖拽移动**: 拖动窗口移动桌宠位置
-- **右键菜单**: 右键点击显示操作菜单
-- **状态显示**: 桌宠表情反映当前任务状态
-
----
+### 漏洞扫描
+- Nmap端口扫描
+- Nuclei漏洞扫描
+- 自定义扫描任务
 
 ## 项目结构
 
 ```
-RedOps-Agent/
-├── web/                      # Web后端服务
-│   ├── main.py             # FastAPI主程序
+RedOps/
+├── web/                    # Web后端
 │   ├── app/
-│   │   ├── api/            # API路由
-│   │   │   ├── chat.py     # 对话接口
-│   │   │   ├── scan.py     # 扫描接口
-│   │   │   ├── targets.py  # 目标管理
-│   │   │   └── skills.py   # 技能管理
-│   │   ├── core/           # 核心模块
-│   │   │   ├── llm_agent.py    # LLM智能代理
-│   │   │   ├── memory_system.py # 记忆系统
-│   │   │   ├── skill_registry.py # 技能注册
-│   │   │   └── manager.py   # 任务管理器
-│   │   └── integrations/   # 第三方集成
-│   │       └── fofa.py      # FOFA集成
-│   └── templates/           # HTML模板
-├── frontend/                # Web前端
-│   └── index.html          # 单页应用
-├── desktop_pet.py          # 桌面宠物
-├── start.sh                # Kali启动脚本
-├── start.bat               # Windows启动脚本
-└── requirements.txt        # Python依赖
+│   │   ├── api/          # API路由
+│   │   ├── core/         # 核心模块
+│   │   └── static/       # 静态文件
+│   └── main.py           # 入口文件
+├── frontend/              # 前端页面
+├── requirements.txt       # Python依赖
+├── setup_env.sh         # 环境安装脚本
+└── start.sh             # 启动脚本
 ```
 
----
+## 系统要求
 
-## 配置说明
+- Python 3.10+
+- Kali Linux 2024.4+ / Windows 10+ / macOS
+- 推荐 4GB+ RAM
+- 网络连接（用于LLM API调用）
 
-### LLM提供商配置
+## 技术栈
 
-#### DeepSeek
+- **后端**: FastAPI + Uvicorn
+- **前端**: 原生HTML/CSS/JavaScript
+- **LLM**: OpenAI/DeepSeek兼容API
+- **终端**: WebSocket实时交互
 
-```yaml
-llm:
-  provider: "deepseek"
-  api_key: "your-deepseek-api-key"
-  base_url: "https://api.deepseek.com/v1"
-  model: "deepseek-chat"
+## 使用示例
+
+```
+用户: 帮我扫描 example.com 的开放端口
+Agent: [自动执行端口扫描命令]
+      [分析扫描结果]
+      [返回: 发现开放端口: 22, 80, 443, 3306]
 ```
 
-#### OpenAI
-
-```yaml
-llm:
-  provider: "openai"
-  api_key: "your-openai-api-key"
-  model: "gpt-4"
 ```
-
-#### Anthropic Claude
-
-```yaml
-llm:
-  provider: "anthropic"
-  api_key: "your-claude-api-key"
-  model: "claude-3-opus-20240229"
+用户: 这个网站有没有SQL注入
+Agent: [自动进行SQL注入测试]
+      [分析测试结果]
+      [返回: 未发现SQL注入漏洞 或 发现漏洞位置]
 ```
-
-#### 阿里云Qwen
-
-```yaml
-llm:
-  provider: "qwen"
-  api_key: "your-qwen-api-key"
-  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-  model: "qwen-plus"
-```
-
-### 高级配置
-
-#### 自定义技能
-
-在 `web/app/core/skills/` 目录下添加自定义技能模块。
-
-#### Nuclei模板
-
-项目使用Nuclei官方模板库，支持自定义POC。
-
----
 
 ## 注意事项
 
-⚠️ **免责声明**: 本工具仅供授权的安全测试和渗透测试使用。未经授权使用本工具对他人系统进行渗透测试是违法行为，使用者需自行承担法律责任。
+⚠️ **仅用于授权的安全测试**  
+请确保您拥有目标系统的合法授权。
 
-- 请确保在获得授权的情况下使用本工具
-- 遵守当地法律法规
-- 建议在隔离环境（如虚拟机）中测试使用
-
----
-
-## 常见问题
-
-### Q: 启动失败提示缺少依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-### Q: LLM API调用失败
-
-- 检查API密钥是否正确
-- 确认网络能够访问API服务
-- 查看日志中的具体错误信息
-
-### Q: 桌面宠物显示异常
-
-- 确保已安装tkinter库
-- Windows用户可能需要安装ActiveTcl
-
-### Q: Nuclei扫描失败
-
-- 确认Nuclei已正确安装
-- 检查目标网络连通性
-
----
-
-## 技术支持
-
-- 问题反馈: GitHub Issues
-- 功能建议: GitHub Discussions
-
----
-
-## 更新日志
-
-### v1.0.0 (2026-03)
-
-- 初始版本发布
-- LLM智能代理核心
-- Web界面
-- 桌面宠物
-- Nuclei集成
-- FOFA资产搜索
-
----
-
-## License
+## 许可证
 
 MIT License
 
----
+## 贡献
 
-<p align="center">Made with ❤️ by RedOps Team</p>
+欢迎提交Issue和Pull Request！

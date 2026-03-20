@@ -26,8 +26,7 @@ class PermissionGuard:
         # 危险路径列表（即使在白名单也不允许）
         self.dangerous_paths = [
             "/boot", "/sys", "/proc", "/dev",
-            "/etc/passwd", "/etc/shadow", "/etc/sudoers",
-            "C:\\Windows\\System32", "C:\\Windows\\SysWOW64"
+            "/etc/passwd", "/etc/shadow", "/etc/sudoers"
         ]
     
     def set_allowed_paths(self, paths: List[str]):
@@ -143,13 +142,11 @@ class SystemExecutor:
         
         try:
             # 构建执行参数
-            shell = True if self.platform == "Windows" else False
+            shell = True if self.platform == "Windows" else True  # 统一使用shell
             
-            # Windows使用cmd，Linux使用bash
-            if self.platform == "Windows":
-                cmd = command
-            else:
-                cmd = f"/bin/bash -c '{command}'"
+            # 直接执行命令，不需要bash包装
+            # Linux上的工具(nmap, curl等)通常已经在PATH中
+            cmd = command
             
             kwargs = {
                 "shell": shell,
@@ -226,6 +223,30 @@ class SystemExecutor:
             return {
                 "success": False,
                 "content": "",
+                "error": str(e)
+            }
+    
+    def read_file_binary(self, filepath: str) -> Dict[str, Any]:
+        """读取二进制文件"""
+        if not self.permission_guard.is_path_allowed(filepath):
+            return {
+                "success": False,
+                "content": b"",
+                "error": f"没有权限读取文件: {filepath}"
+            }
+        
+        try:
+            with open(filepath, "rb") as f:
+                content = f.read()
+            return {
+                "success": True,
+                "content": content,
+                "error": None
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "content": b"",
                 "error": str(e)
             }
     
