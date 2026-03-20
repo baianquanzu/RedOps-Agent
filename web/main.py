@@ -20,6 +20,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from web.app.api import chat, targets, scan, config as api_config, skills, system, connectors, terminal, file_manager
+from web.app.api import scan_api
 from web.app.core.manager import ScanManager
 from web.app.core.config_manager import get_config_manager, init_config_manager
 from web.app.core.executor import init_executor, get_executor
@@ -110,6 +111,7 @@ app.include_router(system.router, prefix="/api/system", tags=["System"])
 app.include_router(connectors.router, prefix="/api/connectors", tags=["Connectors"])
 app.include_router(terminal.router, prefix="/api/terminal", tags=["Terminal"])
 app.include_router(file_manager.router, prefix="/api/files", tags=["Files"])
+app.include_router(scan_api.router, prefix="/api/recon", tags=["Recon"])
 
 
 # WebSocket连接管理器
