@@ -1,25 +1,44 @@
 # RedOps Agent
 
-> 智能渗透测试Agent - 像人类一样思考和行动的自动化测试助手
+> ⚠️ **测试版 (v0.1)** - 功能正在持续开发完善中
 
 [![Python Version](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Kali%20Linux%20|%20Windows%20|%20macOS-green.svg)](https://www.kali.org/)
+[![Status](https://img.shields.io/badge/Status-Beta-orange.svg)]()
 
-## 特性
+## ⚠️ 免责声明
 
-- **智能对话** - 大模型驱动，自然语言交互
-- **终端控制** - Web界面直接操作root shell
-- **文件管理** - Root权限文件浏览、上传、下载
-- **漏洞扫描** - 集成Nuclei、Nmap等扫描工具
-- **跨平台** - 支持Kali Linux、Windows、macOS
+**本工具仅供学习和研究使用，请勿用于任何未经授权的渗透测试。**
+使用本工具时，请确保遵守当地法律法规，因滥用导致的任何后果由使用者自行承担。
+
+## 当前功能
+
+### ✅ 已实现
+
+| 功能 | 说明 | 状态 |
+|------|------|------|
+| 对话助手 | 基于LLM的对话交互 | 可用 |
+| 终端 | WebShell操作界面 | 可用 |
+| 文件管理 | 文件浏览、上传、下载 | 可用 |
+| 漏洞扫描 | Nuclei集成 | 基础可用 |
+| 渗透工作流 | 9阶段半自动化扫描 | 测试中 |
+
+### 🔧 开发中
+
+| 功能 | 说明 | 进度 |
+|------|------|------|
+| FOFA集成 | FOFA API资产搜集 | 待测试 |
+| 子域名爆破 | Subfinder/Assetfinder集成 | 基础可用 |
+| 弱口令检测 | Hydra爆破 | 待完善 |
+| 实时进度推送 | WebSocket | 基础可用 |
 
 ## 快速开始
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/RedOps.git
-cd RedOps
+git clone https://github.com/baianquanzu/RedOps-Agent.git
+cd RedOps-Agent
 ```
 
 ### 2. 安装依赖
@@ -31,59 +50,70 @@ bash setup_env.sh
 
 **Windows/macOS:**
 ```bash
-# 创建虚拟环境
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# 安装依赖
 pip install -r requirements.txt
 ```
 
-### 3. 配置LLM
+### 3. 前置工具（可选）
+
+部分功能需要提前安装的工具：
+```bash
+# Kali自带工具（如果没有）
+sudo apt install nmap nuclei curl
+```
+
+### 4. 配置LLM
 
 启动后访问 http://localhost:8000 ，进入「系统设置」配置：
 
 | 配置项 | 说明 |
 |--------|------|
-| API Provider | 选择服务商 (DeepSeek/OpenAI/Anthropic等) |
+| API Provider | 选择服务商 (DeepSeek/OpenAI等) |
 | API Key | 你的API密钥 |
 | API地址 | API端点URL |
 | 模型 | 使用的模型名称 |
 
-### 4. 启动服务
+### 5. 启动服务
 
 ```bash
-# 方式1：一键启动
 bash start.sh
-
-# 方式2：手动启动
-source venv/bin/activate
-python start_server.py
 ```
 
 服务启动后访问 **http://localhost:8000**
 
-## 功能模块
+## 技术架构
 
-### 对话助手
-- 自然语言与Agent交互
-- 自动分析和执行命令
-- 智能结果分析
+```
+┌─────────────────────────────────────────┐
+│              Web界面 (HTML/JS)           │
+├─────────────────────────────────────────┤
+│           FastAPI Web后端                │
+│  ┌─────────┬──────────┬────────────┐  │
+│  │ Chat API│Terminal API│Files API  │  │
+│  └─────────┴──────────┴────────────┘  │
+├─────────────────────────────────────────┤
+│           LLM Agent (LLM集成)           │
+├─────────────────────────────────────────┤
+│         System Executor (命令执行)        │
+└─────────────────────────────────────────┘
+```
 
-### 终端
-- WebShell操作界面
-- Root权限命令执行
-- 实时命令输出
+## 依赖工具
 
-### 文件管理
-- 完整文件系统浏览
-- 文件上传/下载
-- 文本编辑器
+部分功能依赖系统工具，请确保已安装：
 
-### 漏洞扫描
-- Nmap端口扫描
-- Nuclei漏洞扫描
-- 自定义扫描任务
+| 工具 | 用途 | 安装命令 |
+|------|------|---------|
+| nmap | 端口扫描 | `sudo apt install nmap` |
+| nuclei | 漏洞扫描 | 见官方安装 |
+| curl | HTTP请求 | `sudo apt install curl` |
+| subfinder | 子域名 | 见官方安装 |
+| dirsearch | 目录扫描 | 见官方安装 |
+| ffuf | 模糊测试 | `sudo apt install ffuf` |
+| hydra | 暴力破解 | `sudo apt install hydra` |
+
+**注意**: 这些工具不是必须安装的，但安装后会获得完整功能体验。
 
 ## 项目结构
 
@@ -92,12 +122,12 @@ RedOps/
 ├── web/                    # Web后端
 │   ├── app/
 │   │   ├── api/          # API路由
-│   │   ├── core/         # 核心模块
+│   │   ├── core/         # 核心模块 (Agent、执行器、编排器)
 │   │   └── static/       # 静态文件
 │   └── main.py           # 入口文件
 ├── frontend/              # 前端页面
-├── requirements.txt       # Python依赖
-├── setup_env.sh         # 环境安装脚本
+├── requirements.txt      # Python依赖
+├── setup_env.sh          # 环境安装脚本
 └── start.sh             # 启动脚本
 ```
 
@@ -108,33 +138,23 @@ RedOps/
 - 推荐 4GB+ RAM
 - 网络连接（用于LLM API调用）
 
-## 技术栈
+## API接口
 
-- **后端**: FastAPI + Uvicorn
-- **前端**: 原生HTML/CSS/JavaScript
-- **LLM**: OpenAI/DeepSeek兼容API
-- **终端**: WebSocket实时交互
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/chat/message` | POST | 对话接口 |
+| `/api/terminal/exec` | POST | 执行命令 |
+| `/api/files/list` | POST | 列出目录 |
+| `/api/files/upload` | POST | 上传文件 |
+| `/api/files/download` | GET | 下载文件 |
+| `/api/recon/start` | POST | 启动扫描 |
 
-## 使用示例
+## 已知问题
 
-```
-用户: 帮我扫描 example.com 的开放端口
-Agent: [自动执行端口扫描命令]
-      [分析扫描结果]
-      [返回: 发现开放端口: 22, 80, 443, 3306]
-```
-
-```
-用户: 这个网站有没有SQL注入
-Agent: [自动进行SQL注入测试]
-      [分析测试结果]
-      [返回: 未发现SQL注入漏洞 或 发现漏洞位置]
-```
-
-## 注意事项
-
-⚠️ **仅用于授权的安全测试**  
-请确保您拥有目标系统的合法授权。
+- 渗透工作流部分功能需要手动安装依赖工具
+- FOFA API集成尚未完整测试
+- 弱口令检测功能待完善
+- 实时进度推送偶发延迟
 
 ## 许可证
 
